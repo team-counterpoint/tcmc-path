@@ -12,7 +12,7 @@ module ctlfc_path[S]
 
 // ********** Kripke structure *************************************************
 
-private one sig TS {
+one sig TS {
     S0: some S,
     sigma: S -> S,
     FC: set S
@@ -20,7 +20,7 @@ private one sig TS {
 
 // ********** Path definition **************************************************
 
-private sig Path {
+sig Path {
     next: lone Path,
     state: one S
 }
@@ -98,4 +98,4 @@ fun au[phi, si: S]: S {
 // ********** Model checking constraint ****************************************
 
 // Called by users for model checking in their model file.
-pred ctlfc_path_mc[phi: S] {TS.S0 in phi}
+pred ctlfc_mc[phi: S] {TS.S0 in phi}

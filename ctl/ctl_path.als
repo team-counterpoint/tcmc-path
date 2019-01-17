@@ -12,14 +12,14 @@ module ctl_path[S]
 
 // ********** Kripke structure *************************************************
 
-private one sig TS {
+one sig TS {
     S0: some S,
     sigma: S -> S
 }
 
 // ********** Path definition **************************************************
 
-private sig Path {
+sig Path {
     next: lone Path,
     state: one S
 }
@@ -86,4 +86,4 @@ fun au[phi, si: S]: S {
 // ********** Model checking constraint ****************************************
 
 // Called by users for model checking in their model file.
-pred ctl_path_mc[phi: S] {TS.S0 in phi}
+pred ctl_mc[phi: S] {TS.S0 in phi}

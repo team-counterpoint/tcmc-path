@@ -12,7 +12,7 @@ module ctl[S]
 
 // ********** Kripke structure *************************************************
 
-private one sig TS {
+one sig TS{
     S0: some S,
     sigma: S -> S
 }
