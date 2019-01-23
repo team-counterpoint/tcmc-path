@@ -8,16 +8,29 @@
  * https://opensource.org/licenses/BSD-2-Clause.
  */
 
-module ctlfc_path[S]
+{% set sigma = 'pathSigma' if sigma else 'TS.sigma' %}
+
+{% macro inter(set, fair) -%}
+    {% if fc -%}
+        ({{ set }} & {{ fair }})
+    {%- else -%}
+        {{ set }}
+    {%- endif %}
+{%- endmacro %}
+
+module {{ name }}[S]
 
 // ********** Kripke structure *************************************************
 
 one sig TS {
     S0: some S,
     sigma: S -> S,
+    {% if fc %}
     FC: set S
+    {% endif %}
 }
 
+{% if path %}
 // ********** Path definition **************************************************
 
 sig Path {
@@ -38,22 +51,26 @@ fact {
     // The path is connected.
     P0.*next = Path
 }
+{% endif %}
 
 // ********** Model setup functions ********************************************
 
 // Set by users in their model files.
 
-fun initialState: S {TS.S0}
+fun initialState: S { TS.S0 }
 
-fun nextState: S -> S {TS.sigma}
+fun nextState: S -> S { TS.sigma }
 
-fun fc: S {TS.FC}
+{% if fc %}
+fun fc: S { TS.FC }
+{% endif %}
 
 // ********** Helper functions *************************************************
 
-private fun domainRes[R: S -> S, X: S]: S -> S {X <: R}
-private fun id[X:S]: S -> S {domainRes[iden,X]}
+private fun domainRes[R: S -> S, X: S]: S -> S { X <: R }
+private fun id[X:S]: S -> S { domainRes[iden,X] }
 
+{% if fc %}
 // ********** Fair states definition *******************************************
 
 // Fair is EcG true.
@@ -62,32 +79,35 @@ private fun Fair: S {
     let R = TS.sigma |
         *R.((^R & id[S]).S & TS.FC)
 }
- 
+{% endif %}
+
 // ********** Logical operators ************************************************
 
-fun not_[phi: S]: S {S - phi}
-fun and_[phi, si: S]: S {phi & si}
-fun or_[phi, si: S]: S {phi + si}
-fun imp_[phi, si: S]: S {not_[phi] + si}
+fun not_[phi: S]: S { S - phi }
+fun and_[phi, si: S]: S { phi & si }
+fun or_[phi, si: S]: S { phi + si }
+fun imp_[phi, si: S]: S { not_[phi] + si }
 
 // ********** Temporal operators ***********************************************
 
-fun ex[phi: S]: S {pathSigma.(phi & Fair)}
+fun ex[phi: S]: S { {{ sigma }}.{{ inter('phi', 'Fair') }} }
 
-fun ax[phi:S]: S {not_[ex[not_[phi]]]}
+fun ax[phi:S]: S { not_[ex[not_[phi]]] }
 
-fun ef[phi: S]: S {(*(pathSigma)).(phi & Fair)}
+fun ef[phi: S]: S { (*({{ sigma }})).{{ inter('phi', 'Fair') }} }
 
-fun eg[phi:S]: S { 
-    let R= domainRes[pathSigma,phi]|
+fun eg[phi:S]: S {
+    let R= domainRes[{{ sigma }}, phi] |
         *R.((^R & id[S]).S & TS.FC)
 }
 
-fun af[phi: S]: S {not_[eg[not_[phi]]]}
+fun af[phi: S]: S { not_[eg[not_[phi]]] }
 
-fun ag[phi: S]: S {not_[ef[not_[phi]]]}
+fun ag[phi: S]: S { not_[ef[not_[phi]]] }
 
-fun eu[phi, si: S]: S {(*(domainRes[pathSigma, phi])).(si & Fair)}
+fun eu[phi, si: S]: S {
+    (*(domainRes[{{ sigma }}, phi])).{{ inter('si', 'Fair') }}
+}
 
 // TODO: Why was this only defined in ctlfc.als and not ctl.als?
 fun au[phi, si: S]: S {
@@ -98,4 +118,4 @@ fun au[phi, si: S]: S {
 // ********** Model checking constraint ****************************************
 
 // Called by users for model checking in their model file.
-pred ctlfc_mc[phi: S] {TS.S0 in phi}
+pred {{ name }}_mc[phi: S] { TS.S0 in phi }
