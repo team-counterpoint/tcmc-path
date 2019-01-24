@@ -12,6 +12,7 @@ def main():
     parser.add_argument("--name")
     parser.add_argument("--fc", action="store_true")
     parser.add_argument("--path", action="store_true")
+    parser.add_argument("--subgraph", action="store_true")
     args = parser.parse_args()
 
     env = jinja2.Environment(
@@ -20,7 +21,9 @@ def main():
         lstrip_blocks=True,
     )
     template = env.get_template("template.als")
-    result = template.render(name=args.name, fc=args.fc, path=args.path)
+    result = template.render(
+        name=args.name, fc=args.fc, path=args.path, subgraph=args.subgraph
+    )
     result = re.sub(r"\n\n+", "\n\n", result)
     print(result)
 

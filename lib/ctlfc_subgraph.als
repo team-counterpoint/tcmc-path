@@ -8,13 +8,32 @@
  * https://opensource.org/licenses/BSD-2-Clause.
  */
 
-module ctl[S]
+module ctlfc_subgraph[S]
 
 // ********** Kripke structure *************************************************
 
 one sig TS {
     S0: some S,
     sigma: S -> S,
+    FC: set S
+}
+
+// ********* Subgraph definition ***********************************************
+
+sig Transition {
+    transFrom: S,
+    transTo: S
+}
+
+fun subSigma: S -> S { ~transFrom.transTo }
+
+fact {
+    -- Subset of sigma.
+    subSigma in TS.sigma
+    -- No duplicate transitions.
+    all t, t': Transition |
+        t.transFrom = t'.transFrom && t.transTo = t'.transTo => t = t'
+    some s: S | s.~transFrom.(*(transTo.~transFrom)) = Transition
 }
 
 // ********** Model setup functions ********************************************
@@ -25,10 +44,20 @@ fun initialState: S { TS.S0 }
 
 fun nextState: S -> S { TS.sigma }
 
+fun fc: S { TS.FC }
+
 // ********** Helper functions *************************************************
 
 private fun domainRes[R: S -> S, X: S]: S -> S { X <: R }
 private fun id[X:S]: S -> S { domainRes[iden,X] }
+
+// ********** Fair states definition *******************************************
+
+// Fair is EcG true.
+private fun Fair: S {
+    let R = subSigma |
+        *R.((^R & id[S]).S & TS.FC)
+}
 
 // ********** Logical operators ************************************************
 
@@ -39,15 +68,15 @@ fun imp_[phi, si: S]: S { not_[phi] + si }
 
 // ********** Temporal operators ***********************************************
 
-fun ex[phi: S]: S { TS.sigma.phi }
+fun ex[phi: S]: S { subSigma.(phi & Fair) }
 
 fun ax[phi:S]: S { not_[ex[not_[phi]]] }
 
-fun ef[phi: S]: S { (*(TS.sigma)).phi }
+fun ef[phi: S]: S { (*(subSigma)).(phi & Fair) }
 
 fun eg[phi:S]: S {
-    let R = domainRes[TS.sigma, phi] |
-        *R.((^R & id[S]).S)
+    let R = domainRes[subSigma, phi] |
+        *R.(((^R & id[S]).S & TS.FC))
 }
 
 fun af[phi: S]: S { not_[eg[not_[phi]]] }
@@ -55,7 +84,7 @@ fun af[phi: S]: S { not_[eg[not_[phi]]] }
 fun ag[phi: S]: S { not_[ef[not_[phi]]] }
 
 fun eu[phi, si: S]: S {
-    (*(domainRes[TS.sigma, phi])).si
+    (*(domainRes[subSigma, phi])).(si & Fair)
 }
 
 // TODO: Why was this only defined in ctlfc.als and not ctl.als?
@@ -67,4 +96,4 @@ fun au[phi, si: S]: S {
 // ********** Model checking constraint ****************************************
 
 // Called by users for model checking in their model file.
-pred ctl_mc[phi: S] { TS.S0 in phi }
+pred ctlfc_mc[phi: S] { TS.S0 in phi }

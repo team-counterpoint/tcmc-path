@@ -8,7 +8,13 @@
  * https://opensource.org/licenses/BSD-2-Clause.
  */
 
-{% set sigma = 'pathSigma' if sigma else 'TS.sigma' %}
+{% if path %}
+    {% set sigma = 'pathSigma' %}
+{% elif subgraph %}
+    {% set sigma = 'subSigma' %}
+{% else %}
+    {% set sigma = 'TS.sigma' %}
+{% endif %}
 
 {% macro inter(set, fair) -%}
     {% if fc -%}
@@ -31,25 +37,50 @@ one sig TS {
 }
 
 {% if path %}
-// ********** Path definition **************************************************
+// ********* Path definition ***************************************************
 
-sig Path {
-    next: lone Path,
-    state: one S
+sig PathNode {
+    nextNode: lone PathNode,
+    nodeState: disj one S
 }
 
-private one sig P0 in Path {}
+one sig P0 in PathNode {}
 
-fun pathState: S { Path.state }
-fun pathSigma: S -> S { ~state.next.state }
+fun pathState: S { PathNode.nodeState }
+fun pathSigma: S -> S { ~nodeState.nextNode.nodeState }
 
 fact {
     // Successive states in path are connected by transitions.
     pathSigma in TS.sigma
     // It includes an initial state.
-    P0.state in TS.S0
+    P0.nodeState in TS.S0
     // The path is connected.
-    P0.*next = Path
+    P0.*nextNode = PathNode
+}
+
+pred finitePath {
+    some p : PathNode | no p.nextNode
+}
+{% endif %}
+
+{% if subgraph %}
+// ********* Subgraph definition ***********************************************
+
+sig Transition {
+    transFrom: S,
+    transTo: S
+}
+
+fun subSigma: S -> S { ~transFrom.transTo }
+
+fact {
+    -- Subset of sigma.
+    subSigma in TS.sigma
+    -- No duplicate transitions.
+    all t, t': Transition |
+        t.transFrom = t'.transFrom && t.transTo = t'.transTo => t = t'
+    -- Connected.
+    some s: S | s.~transFrom.(*(transTo.~transFrom)) = Transition
 }
 {% endif %}
 
@@ -75,8 +106,7 @@ private fun id[X:S]: S -> S { domainRes[iden,X] }
 
 // Fair is EcG true.
 private fun Fair: S {
-    // TODO: should this be pathSigma?
-    let R = TS.sigma |
+    let R = {{ sigma }} |
         *R.((^R & id[S]).S & TS.FC)
 }
 {% endif %}
@@ -97,8 +127,8 @@ fun ax[phi:S]: S { not_[ex[not_[phi]]] }
 fun ef[phi: S]: S { (*({{ sigma }})).{{ inter('phi', 'Fair') }} }
 
 fun eg[phi:S]: S {
-    let R= domainRes[{{ sigma }}, phi] |
-        *R.((^R & id[S]).S & TS.FC)
+    let R = domainRes[{{ sigma }}, phi] |
+        *R.({{ inter('(^R & id[S]).S', 'TS.FC') }})
 }
 
 fun af[phi: S]: S { not_[eg[not_[phi]]] }
@@ -118,4 +148,4 @@ fun au[phi, si: S]: S {
 // ********** Model checking constraint ****************************************
 
 // Called by users for model checking in their model file.
-pred {{ name }}_mc[phi: S] { TS.S0 in phi }
+pred {{ 'ctlfc' if fc else 'ctl' }}_mc[phi: S] { TS.S0 in phi }

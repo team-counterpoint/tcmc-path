@@ -37,7 +37,6 @@ private fun id[X:S]: S -> S { domainRes[iden,X] }
 
 // Fair is EcG true.
 private fun Fair: S {
-    // TODO: should this be pathSigma?
     let R = TS.sigma |
         *R.((^R & id[S]).S & TS.FC)
 }
@@ -58,8 +57,8 @@ fun ax[phi:S]: S { not_[ex[not_[phi]]] }
 fun ef[phi: S]: S { (*(TS.sigma)).(phi & Fair) }
 
 fun eg[phi:S]: S {
-    let R= domainRes[TS.sigma, phi] |
-        *R.((^R & id[S]).S & TS.FC)
+    let R = domainRes[TS.sigma, phi] |
+        *R.(((^R & id[S]).S & TS.FC))
 }
 
 fun af[phi: S]: S { not_[eg[not_[phi]]] }

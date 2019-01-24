@@ -8,13 +8,31 @@
  * https://opensource.org/licenses/BSD-2-Clause.
  */
 
-module ctl[S]
+module ctl_subgraph[S]
 
 // ********** Kripke structure *************************************************
 
 one sig TS {
     S0: some S,
     sigma: S -> S,
+}
+
+// ********* Subgraph definition ***********************************************
+
+sig Transition {
+    transFrom: S,
+    transTo: S
+}
+
+fun subSigma: S -> S { ~transFrom.transTo }
+
+fact {
+    -- Subset of sigma.
+    subSigma in TS.sigma
+    -- No duplicate transitions.
+    all t, t': Transition |
+        t.transFrom = t'.transFrom && t.transTo = t'.transTo => t = t'
+    some s: S | s.~transFrom.(*(transTo.~transFrom)) = Transition
 }
 
 // ********** Model setup functions ********************************************
@@ -39,14 +57,14 @@ fun imp_[phi, si: S]: S { not_[phi] + si }
 
 // ********** Temporal operators ***********************************************
 
-fun ex[phi: S]: S { TS.sigma.phi }
+fun ex[phi: S]: S { subSigma.phi }
 
 fun ax[phi:S]: S { not_[ex[not_[phi]]] }
 
-fun ef[phi: S]: S { (*(TS.sigma)).phi }
+fun ef[phi: S]: S { (*(subSigma)).phi }
 
 fun eg[phi:S]: S {
-    let R = domainRes[TS.sigma, phi] |
+    let R = domainRes[subSigma, phi] |
         *R.((^R & id[S]).S)
 }
 
@@ -55,7 +73,7 @@ fun af[phi: S]: S { not_[eg[not_[phi]]] }
 fun ag[phi: S]: S { not_[ef[not_[phi]]] }
 
 fun eu[phi, si: S]: S {
-    (*(domainRes[TS.sigma, phi])).si
+    (*(domainRes[subSigma, phi])).si
 }
 
 // TODO: Why was this only defined in ctlfc.als and not ctl.als?
