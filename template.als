@@ -39,25 +39,31 @@ one sig TS {
 {% if path %}
 // ********* Path definition ***************************************************
 
+// The path is a linked list of nodes.
 sig PathNode {
+    // Each node has 0 or 1 successor.
     nextNode: lone PathNode,
+    // Each node points to a different state.
     nodeState: disj one S
 }
 
+// The path has a start node.
 one sig P0 in PathNode {}
 
+// We can project PathNode onto the transition system.
 fun pathState: S { PathNode.nodeState }
 fun pathSigma: S -> S { ~nodeState.nextNode.nodeState }
 
 fact {
-    // Successive states in path are connected by transitions.
+    // The path respects transitions.
     pathSigma in TS.sigma
-    // It includes an initial state.
+    // The start node is in an initial state.
     P0.nodeState in TS.S0
     // The path is connected.
     P0.*nextNode = PathNode
 }
 
+// Allow the user to optionally enforce a finite path.
 pred finitePath {
     some p : PathNode | no p.nextNode
 }
@@ -66,20 +72,23 @@ pred finitePath {
 {% if subgraph %}
 // ********* Subgraph definition ***********************************************
 
+// Reify the transition relation as a signature.
 sig Transition {
     transFrom: S,
     transTo: S
 }
 
+// We can project Transition onto the transition system.
+fun subState: S { Transition.(transFrom + transTo) }
 fun subSigma: S -> S { ~transFrom.transTo }
 
 fact {
-    -- Subset of sigma.
+    // The subgraph respects transitions.
     subSigma in TS.sigma
-    -- No duplicate transitions.
+    // There are no duplicate Transition elements.
     all t, t': Transition |
         t.transFrom = t'.transFrom && t.transTo = t'.transTo => t = t'
-    -- Connected.
+    // The subgraph is connected.
     some s: S | s.~transFrom.(*(transTo.~transFrom)) = Transition
 }
 {% endif %}

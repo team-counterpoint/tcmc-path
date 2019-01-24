@@ -20,25 +20,31 @@ one sig TS {
 
 // ********* Path definition ***************************************************
 
+// The path is a linked list of nodes.
 sig PathNode {
+    // Each node has 0 or 1 successor.
     nextNode: lone PathNode,
+    // Each node points to a different state.
     nodeState: disj one S
 }
 
+// The path has a start node.
 one sig P0 in PathNode {}
 
+// We can project PathNode onto the transition system.
 fun pathState: S { PathNode.nodeState }
 fun pathSigma: S -> S { ~nodeState.nextNode.nodeState }
 
 fact {
-    // Successive states in path are connected by transitions.
+    // The path respects transitions.
     pathSigma in TS.sigma
-    // It includes an initial state.
+    // The start node is in an initial state.
     P0.nodeState in TS.S0
     // The path is connected.
     P0.*nextNode = PathNode
 }
 
+// Allow the user to optionally enforce a finite path.
 pred finitePath {
     some p : PathNode | no p.nextNode
 }

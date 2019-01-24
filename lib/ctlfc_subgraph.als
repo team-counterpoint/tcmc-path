@@ -20,19 +20,23 @@ one sig TS {
 
 // ********* Subgraph definition ***********************************************
 
+// Reify the transition relation as a signature.
 sig Transition {
     transFrom: S,
     transTo: S
 }
 
+// We can project Transition onto the transition system.
+fun subState: S { Transition.(transFrom + transTo) }
 fun subSigma: S -> S { ~transFrom.transTo }
 
 fact {
-    -- Subset of sigma.
+    // The subgraph respects transitions.
     subSigma in TS.sigma
-    -- No duplicate transitions.
+    // There are no duplicate Transition elements.
     all t, t': Transition |
         t.transFrom = t'.transFrom && t.transTo = t'.transTo => t = t'
+    // The subgraph is connected.
     some s: S | s.~transFrom.(*(transTo.~transFrom)) = Transition
 }
 
